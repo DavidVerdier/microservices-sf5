@@ -6,9 +6,25 @@ use ApiPlatform\Core\Annotation\ApiResource;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 /**
- * @ApiResource()
+ * @ApiResource(
+ *     normalizationContext={"groups"={"mail", "mail:read"}},
+ *     denormalizationContext={"groups"={"mail", "mail:write"}},
+ *     collectionOperations={"post"},
+ *     itemOperations={
+ *       "get"={
+ *            "access_control"="true"
+ *        },
+ *       "put"={
+ *            "access_control"="true"
+ *        },
+ *       "delete"={
+ *            "access_control"="true"
+ *        },
+ *    }
+ * )
  * @ORM\Entity(repositoryClass="App\Repository\MailsRepository")
  */
 class Mails
@@ -17,41 +33,50 @@ class Mails
      * @ORM\Id()
      * @ORM\GeneratedValue()
      * @ORM\Column(type="integer")
+     *
+     * @Groups({"mail"})
      */
     private $id;
 
     /**
-     * @ORM\Column(type="string", length=255, nullable=true)
+     * @ORM\Column(type="string", length=255, nullable=false)
+     * @Groups({"mail"})
      */
-    private $subject;
+    private $type;
 
     /**
-     * @ORM\Column(type="text")
+     * @ORM\Column(type="json", nullable=true)
+     * @Groups({"mail"})
      */
-    private $content;
+    private $data;
 
     /**
      * @ORM\Column(type="string", length=255)
+     * @Groups({"mail"})
      */
-    private $from_email;
+    private $fromEmail;
 
     /**
      * @ORM\Column(type="datetime")
+     * @Groups({"mail:read"})
      */
     private $createdAt;
 
     /**
      * @ORM\Column(type="datetime", nullable=true)
+     * @Groups({"mail"})
      */
     private $sentAt;
 
     /**
-     * @ORM\OneToMany(targetEntity="App\Entity\ToEmails", mappedBy="mail", orphanRemoval=true)
+     * @ORM\OneToMany(targetEntity="App\Entity\ToEmails", mappedBy="mail", cascade={"persist"}, orphanRemoval=true)
+     * @Groups({"mail"})
      */
     private $toEmails;
 
     public function __construct()
     {
+        $this->createdAt = new \DateTime();
         $this->toEmails = new ArrayCollection();
     }
 
@@ -60,38 +85,38 @@ class Mails
         return $this->id;
     }
 
-    public function getSubject(): ?string
+    public function getType(): ?string
     {
-        return $this->subject;
+        return $this->type;
     }
 
-    public function setSubject(?string $subject): self
+    public function setType(?string $type): self
     {
-        $this->subject = $subject;
+        $this->type = strtolower($type);
 
         return $this;
     }
 
-    public function getContent(): ?string
+    public function getData(): ?string
     {
-        return $this->content;
+        return $this->data;
     }
 
-    public function setContent(string $content): self
+    public function setData(string $data): self
     {
-        $this->content = $content;
+        $this->data = stripslashes(trim($data));
 
         return $this;
     }
 
     public function getFromEmail(): ?string
     {
-        return $this->from_email;
+        return $this->fromEmail;
     }
 
-    public function setFromEmail(string $from_email): self
+    public function setFromEmail(string $fromEmail): self
     {
-        $this->from_email = $from_email;
+        $this->fromEmail = $fromEmail;
 
         return $this;
     }
